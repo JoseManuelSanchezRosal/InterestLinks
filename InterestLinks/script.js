@@ -1,20 +1,35 @@
 // script.js
 
+// 1. VERIFICACIÓN DE SEGURIDAD Y CARGA
+// Si esto falla, revisa el orden en index.html
+if (typeof supabase === 'undefined') {
+    console.error("CRÍTICO: La librería de Supabase no ha cargado. Revisa el CDN en index.html");
+}
 
+if (typeof CONFIG === 'undefined') {
+    console.error("CRÍTICO: El archivo config.js no se ha generado o cargado.");
+    alert("Error de configuración: Faltan las claves de acceso.");
+}
+
+// 2. INICIALIZACIÓN DE SUPABASE
+// Usamos el objeto CONFIG que viene de config.js (local o Netlify)
 const { createClient } = supabase;
-const _supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+const _supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY);
 
-// Variables Globales
+// 3. VARIABLES GLOBALES
 let globalLinks = [];
 let currentFilter = 'Todos';
 let searchText = '';
 
-// 2. GESTIÓN DE TEMAS
+// 4. GESTIÓN DE TEMAS
 const themes = ['dark', 'light', 'afternoon'];
 const themeIcons = { 'dark': '🌙', 'light': '☀️', 'afternoon': '🌅' };
 
 let currentTheme = localStorage.getItem('classhub_theme') || 'dark';
-applyTheme(currentTheme);
+// Aplicamos el tema inicial con seguridad
+document.addEventListener('DOMContentLoaded', () => {
+    applyTheme(currentTheme);
+});
 
 function toggleTheme() {
     let currentIndex = themes.indexOf(currentTheme);
@@ -26,6 +41,7 @@ function toggleTheme() {
 function applyTheme(themeName) {
     const body = document.body;
     const btn = document.getElementById('themeBtn');
+    
     if (themeName === 'dark') body.removeAttribute('data-theme');
     else body.setAttribute('data-theme', themeName);
     
@@ -33,32 +49,34 @@ function applyTheme(themeName) {
     localStorage.setItem('classhub_theme', themeName);
 }
 
-// 3. CARGAR DATOS
+// 5. CARGAR DATOS
 async function fetchLinks() {
     const loadingElement = document.getElementById('loading');
     
+    // Verificamos conexión antes de llamar
+    if (!_supabase) return;
+
     const { data, error } = await _supabase
         .from('links')
         .select('*')
         .order('created_at', { ascending: false });
 
     if (error) {
-        console.error(error);
-        loadingElement.innerText = "Error cargando datos.";
+        console.error("Error Supabase:", error);
+        loadingElement.innerText = "Error cargando datos. Revisa la consola.";
         return;
     }
 
     loadingElement.style.display = 'none';
-    globalLinks = data;
+    globalLinks = data || []; // Aseguramos que sea array
     renderList();
 }
 
-// 4. RENDERIZAR LISTA (FILTROS + BÚSQUEDA)
+// 6. RENDERIZAR LISTA
 function renderList() {
     const listElement = document.getElementById('link-list');
     listElement.innerHTML = '';
 
-    // Filtrar por categoría Y texto
     const filteredLinks = globalLinks.filter(link => {
         const matchCategory = (currentFilter === 'Todos') || (link.category === currentFilter);
         const matchSearch = link.title.toLowerCase().includes(searchText.toLowerCase());
@@ -79,14 +97,8 @@ function renderList() {
         
         let domain = '';
         try { domain = new URL(link.url).hostname; } catch(e){}
-
-        // Tiempo relativo
         const timeAgo = getTimeAgo(link.created_at);
 
-        
-        // ... dentro del bucle forEach en renderList ...
-
-        // Añadimos el botón con el icono de copiar (📋)
         li.innerHTML = `
             <div class="link-content">
                 <span style="color:var(--text-muted)">#${index + 1}</span>
@@ -100,9 +112,7 @@ function renderList() {
             </div>
             <div style="display:flex; align-items:center;">
                     <span class="tag ${tagClass}" style="margin-right:10px;">${link.category}</span>
-                    
                     <button class="action-btn copy-btn" onclick="copyToClipboard('${link.url}')" title="Copiar enlace">📋</button>
-                    
                     <button class="action-btn delete-btn" onclick="deleteLink(${link.id})" title="Borrar">🗑️</button>
             </div>
         `;
@@ -110,7 +120,7 @@ function renderList() {
     });
 }
 
-// 5. FUNCIONES DE FILTRO
+// 7. FUNCIONES DE FILTRO
 function filterBy(category) {
     currentFilter = category;
     const buttons = document.querySelectorAll('.tab-btn');
@@ -127,7 +137,7 @@ function filterSearch() {
     renderList();
 }
 
-// 6. AÑADIR LINK
+// 8. AÑADIR LINK
 async function addLink() {
     const title = document.getElementById('titleInput').value;
     const url = document.getElementById('urlInput').value;
@@ -148,7 +158,6 @@ async function addLink() {
     } else {
         document.getElementById('titleInput').value = '';
         document.getElementById('urlInput').value = '';
-        // Reseteamos filtros para ver el nuevo
         currentFilter = 'Todos'; 
         filterBy('Todos');
         fetchLinks();
@@ -158,7 +167,7 @@ async function addLink() {
     btn.disabled = false;
 }
 
-// 7. BORRAR LINK
+// 9. BORRAR LINK
 async function deleteLink(idToDelete) {
     const password = prompt("🔒 Zona Admin: Contraseña para borrar:");
     if (password !== "admin123") return alert("Contraseña incorrecta.");
@@ -171,12 +180,12 @@ async function deleteLink(idToDelete) {
     else fetchLinks();
 }
 
-// 8. UTILIDAD TIEMPO
+// 10. UTILIDADES
 function getTimeAgo(dateString) {
     const date = new Date(dateString);
     const now = new Date();
     const seconds = Math.floor((now - date) / 1000);
-
+    // ... simplificado para brevedad, funciona igual que el tuyo
     let interval = seconds / 31536000;
     if (interval > 1) return "Hace " + Math.floor(interval) + " años";
     interval = seconds / 2592000;
@@ -189,15 +198,14 @@ function getTimeAgo(dateString) {
     if (interval > 1) return "Hace " + Math.floor(interval) + " min";
     return "Hace un momento";
 }
-// Función para copiar al portapapeles
+
 function copyToClipboard(text) {
     navigator.clipboard.writeText(text).then(() => {
-        // Feedback visual sencillo (una alerta suave o console log)
         alert("¡Enlace copiado al portapapeles! 📋");
     }).catch(err => {
         console.error('Error al copiar: ', err);
     });
 }
 
-// Iniciar
+// Arrancar
 fetchLinks();
