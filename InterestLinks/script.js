@@ -1,21 +1,22 @@
 // script.js
 
+
+
+// 2. INICIALIZACIÓN DE SUPABASE
+const { createClient } = supabase;
+let _supabase = null;
+const ENVS = {};
+
 // 1. VERIFICACIÓN DE SEGURIDAD Y CARGA
 // Si esto falla, revisa el orden en index.html
 if (typeof supabase === 'undefined') {
     console.error("CRÍTICO: La librería de Supabase no ha cargado. Revisa el CDN en index.html");
 }
 
-if (typeof CONFIG === 'undefined') {
-    console.error("CRÍTICO: El archivo config.js no se ha generado o cargado.");
+if (typeof ENVS === 'undefined') {
+    console.error("CRÍTICO: El archivo env no se ha generado o cargado.");
     alert("Error de configuración: Faltan las claves de acceso.");
 }
-
-// 2. INICIALIZACIÓN DE SUPABASE
-// Usamos el objeto CONFIG que viene de config.js (local o Netlify)
-const { createClient } = supabase;
-const _supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY);
-
 // 3. VARIABLES GLOBALES
 let globalLinks = [];
 let currentFilter = 'Todos';
@@ -23,12 +24,26 @@ let searchText = '';
 
 // 4. GESTIÓN DE TEMAS
 const themes = ['dark', 'light', 'afternoon'];
-const themeIcons = { 'dark': '🌙', 'light': '☀️', 'afternoon': '🌅' };
+const themeIcons = { 'dark': 'moon', 'light': 'sun', 'afternoon': 'sun-moon' };
 
 let currentTheme = localStorage.getItem('classhub_theme') || 'dark';
 // Aplicamos el tema inicial con seguridad
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     applyTheme(currentTheme);
+    document.getElementById('fecha').textContent = new Date().getFullYear();
+    const envs = await fetch('env', {
+        method: 'GET'
+    }).then(response => response.text());
+
+    let item, key, value;
+    for (const env of envs.split('\n')) {
+        item = env.replace('\r', '').split('=');
+        key = item[0];
+        value = item[1];
+        ENVS[key] = value;
+    }
+    _supabase = createClient(ENVS.SUPABASE_URL, ENVS.SUPABASE_KEY);
+    fetchLinks();
 });
 
 function toggleTheme() {
@@ -42,10 +57,15 @@ function applyTheme(themeName) {
     const body = document.body;
     const btn = document.getElementById('themeBtn');
     
-    if (themeName === 'dark') body.removeAttribute('data-theme');
-    else body.setAttribute('data-theme', themeName);
+    if (themeName === 'dark') {
+        body.removeAttribute('data-theme');
+        body.classList.add('dark');
+    } else {
+        body.setAttribute('data-theme', themeName);
+        body.classList.remove('dark');
+    }
     
-    if(btn) btn.innerText = themeIcons[themeName];
+    if(btn) btn.innerHTML = `<img src="svg/${themeIcons[themeName]}.svg" alt="${themeName}">`;
     localStorage.setItem('classhub_theme', themeName);
 }
 
@@ -110,10 +130,10 @@ function renderList() {
                     <small style="color:var(--text-muted); font-size:0.75em; margin-top:4px;">🕒 ${timeAgo}</small>
                 </div>
             </div>
-            <div style="display:flex; align-items:center;">
-                    <span class="tag ${tagClass}" style="margin-right:10px;">${link.category}</span>
-                    <button class="action-btn copy-btn" onclick="copyToClipboard('${link.url}')" title="Copiar enlace">📋</button>
-                    <button class="action-btn delete-btn" onclick="deleteLink(${link.id})" title="Borrar">🗑️</button>
+            <div class="link-content-buttons" style="display:flex; align-items:center;">
+                    <span class="tag ${tagClass}">${link.category}</span>
+                    <button class="action-btn copy-btn" onclick="copyToClipboard('${link.url}')" title="Copiar enlace"><img src="svg/clipboard.svg" alt="Copiar enlace"></button>
+                    <button class="action-btn delete-btn" onclick="deleteLink(${link.id})" title="Borrar"><img src="svg/trash.svg" alt="Borrar"></button>
             </div>
         `;
         listElement.appendChild(li);
@@ -206,6 +226,3 @@ function copyToClipboard(text) {
         console.error('Error al copiar: ', err);
     });
 }
-
-// Arrancar
-fetchLinks();
