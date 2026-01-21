@@ -1,55 +1,78 @@
-# 🚀 ClassHub_ (v2.3)
+# 🚀 ClassHub (2DAM) - Muro de Recursos Compartidos
 
-> **Plataforma colaborativa para compartir recursos educativos en tiempo real.**
+![Estado](https://img.shields.io/badge/Estado-Terminado-success?style=flat-square)
+![Stack](https://img.shields.io/badge/Tech-Vanilla_JS-yellow?style=flat-square)
+![Database](https://img.shields.io/badge/DB-Supabase-green?style=flat-square)
+![Deploy](https://img.shields.io/badge/Deploy-Netlify-00C7B7?style=flat-square)
 
-![Project Status](https://img.shields.io/badge/Status-Active-success)
-![License](https://img.shields.io/badge/License-MIT-blue)
+> Una plataforma colaborativa para gestionar, compartir y filtrar recursos educativos de clase en tiempo real.
+
+![Vista Previa del Proyecto](image_1fb6e7.png)
 
 ## 📖 Descripción
 
-**ClassHub** es una aplicación web tipo SPA (Single Page Application) diseñada para centralizar y democratizar el acceso a recursos de programación. Permite a estudiantes y profesores compartir enlaces de interés, organizarlos por categorías y visualizarlos en una interfaz moderna y personalizable.
+**ClassHub** es una Single Page Application (SPA) desarrollada para los estudiantes de 2º de Desarrollo de Aplicaciones Multiplataforma (2DAM). Su objetivo es centralizar el conocimiento compartido en clase (tutoriales, documentación, herramientas) en un muro interactivo y persistente.
 
-La aplicación utiliza una arquitectura **Serverless** conectándose directamente a **Supabase** desde el cliente, permitiendo actualizaciones en tiempo real sin necesidad de configurar un backend complejo.
+A diferencia de compartir enlaces por chat (donde se pierden con el tiempo), ClassHub los organiza, categoriza y permite su búsqueda instantánea.
 
----
+## ✨ Características Principales
 
-## 🛠️ Stack Tecnológico
+* **⚡ Stack Ligero:** Desarrollado con **Vanilla JavaScript** (ES6+), sin dependencias de frameworks externos, para un rendimiento máximo.
+* **🔍 Buscador en Tiempo Real:** Filtrado instantáneo por título del recurso.
+* **🏷️ Categorización:** Sistema de pestañas para filtrar por temas (Frontend, Backend, Herramientas, Empleo, etc.).
+* **🌑 Temas Visuales:** Soporte nativo para **Modo Oscuro** (Default), Modo Claro y Modo "Afternoon", con persistencia en `localStorage`.
+* **☁️ Base de Datos en la Nube:** Conexión directa a **Supabase** para operaciones CRUD (Crear, Leer, Borrar).
+* **📱 Diseño Responsivo:** Interfaz adaptada a móviles y escritorio mediante CSS Flexbox y Grid.
+* **📋 Utilidades:** Botón de "Copiar al portapapeles" y cálculo automático de "hace cuánto tiempo" se publicó.
 
-El proyecto ha sido construido utilizando estándares modernos de desarrollo web, priorizando el rendimiento y la simplicidad (Vanilla JS).
+## 🛠️ Tecnologías Utilizadas
 
-* **Frontend:**
-    * ![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=flat&logo=html5&logoColor=white) **HTML5 Semántico**
-    * ![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=flat&logo=css3&logoColor=white) **CSS3 Moderno** (Variables CSS, Flexbox, Diseño Responsive)
-    * ![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=flat&logo=javascript&logoColor=black) **JavaScript (ES6+)**
-* **Backend & Base de Datos:**
-    * ![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=flat&logo=supabase&logoColor=white) **Supabase** (PostgreSQL as a Service)
-* **Despliegue:**
-    * ![Netlify](https://img.shields.io/badge/Netlify-00C7B7?style=flat&logo=netlify&logoColor=white) **Netlify**
+* **Frontend:** HTML5, CSS3 (Variables, Flexbox), JavaScript (Fetch API, DOM Manipulation).
+* **Backend (BaaS):** [Supabase](https://supabase.com/) (PostgreSQL).
+* **Control de Versiones:** Git & GitHub.
+* **Despliegue:** [Netlify](https://www.netlify.com/).
 
----
+## 🚀 Instalación y Configuración Local
 
-## ✨ Funcionalidades Clave
+Si deseas clonar y ejecutar este proyecto en tu máquina:
 
-1.  **Publicación en Tiempo Real:** Añade títulos, enlaces y categorías que se sincronizan instantáneamente.
-2.  **Sistema de Filtrado:** Navegación por pestañas (Tabs) para filtrar recursos por temas:
-    * Frontend, Backend, Herramientas, Empleo, Recursos, Otros.
-3.  **Temas Visuales (Dark/Light/Afternoon):**
-    * 🌙 **Modo Hacker:** Oscuro y contrastado.
-    * ☀️ **Modo Día:** Claro y limpio.
-    * 🌅 **Modo Tarde:** Tonos sepia/cálidos para lectura relajada.
-4.  **Gestión de Contenido:**
-    * Posibilidad de **eliminar recursos**.
-    * 🔐 **Seguridad básica:** Protegido mediante contraseña de administrador (Demo: `admin123`).
-5.  **Diseño Responsive:** Adaptado a móviles, tablets y escritorio.
+1.  **Clonar el repositorio:**
+    ```bash
+    git clone [https://github.com/JoseManuelSanchezRosal/ClassHub.git](https://github.com/JoseManuelSanchezRosal/ClassHub.git)
+    cd ClassHub
+    ```
 
----
+2.  **Configurar Base de Datos (Supabase):**
+    * Crea un proyecto en Supabase.
+    * Ejecuta el siguiente SQL en el editor de Supabase para crear la tabla:
 
-## 📂 Estructura del Proyecto
+    ```sql
+    CREATE TABLE links (
+      id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+      title TEXT NOT NULL,
+      url TEXT NOT NULL,
+      category TEXT NOT NULL
+    );
+    ```
+
+3.  **Configurar Variables de Entorno:**
+    El proyecto requiere un archivo llamado `env` (sin extensión) en la raíz del directorio con tus credenciales:
+
+    ```text
+    SUPABASE_URL=[https://tu-proyecto.supabase.co](https://tu-proyecto.supabase.co)
+    SUPABASE_KEY=tu-api-key-anonima
+    ```
+
+4.  **Ejecutar:**
+    Al ser Vanilla JS, no necesitas `npm install`. Simplemente abre el archivo `index.html` con **Live Server** (VS Code) o cualquier servidor estático local.
+
+## 📂 Estructura de Archivos
 
 ```text
-/
-├── index.html      # Estructura principal y maquetación
-├── style.css       # Estilos, variables de temas y diseño responsive
-├── script.js       # Lógica de negocio, conexión a Supabase y DOM
-├── logo.svg        # Logotipo vectorial optimizado
-└── README.md       # Documentación del proyecto
+ClassHub/
+├── 📄 index.html      # Estructura semántica
+├── 📄 style.css       # Estilos, temas y responsive design
+├── 📄 script.js       # Lógica de cliente y conexión a Supabase
+├── 📄 env             # Configuración de claves (GitIgnored)
+└── 📁 svg/            # Iconos vectoriales
