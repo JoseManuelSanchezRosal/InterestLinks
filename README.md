@@ -7,7 +7,6 @@
 
 > Una plataforma colaborativa para gestionar, compartir y filtrar recursos educativos de clase en tiempo real.
 
-![Vista Previa del Proyecto](image_1fb6e7.png)
 
 ## 📖 Descripción
 
