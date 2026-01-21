@@ -1,14 +1,11 @@
 // script.js
 
-
-
 // 2. INICIALIZACIÓN DE SUPABASE
 const { createClient } = supabase;
 let _supabase = null;
 const ENVS = {};
 
 // 1. VERIFICACIÓN DE SEGURIDAD Y CARGA
-// Si esto falla, revisa el orden en index.html
 if (typeof supabase === 'undefined') {
     console.error("CRÍTICO: La librería de Supabase no ha cargado. Revisa el CDN en index.html");
 }
@@ -17,6 +14,7 @@ if (typeof ENVS === 'undefined') {
     console.error("CRÍTICO: El archivo env no se ha generado o cargado.");
     alert("Error de configuración: Faltan las claves de acceso.");
 }
+
 // 3. VARIABLES GLOBALES
 let globalLinks = [];
 let currentFilter = 'Todos';
@@ -27,10 +25,13 @@ const themes = ['dark', 'light', 'afternoon'];
 const themeIcons = { 'dark': 'moon', 'light': 'sun', 'afternoon': 'sun-moon' };
 
 let currentTheme = localStorage.getItem('classhub_theme') || 'dark';
-// Aplicamos el tema inicial con seguridad
+
+// Aplicamos el tema inicial y configuración
 document.addEventListener('DOMContentLoaded', async () => {
     applyTheme(currentTheme);
     document.getElementById('fecha').textContent = new Date().getFullYear();
+    
+    // Cargar variables de entorno simuladas (env)
     const envs = await fetch('env', {
         method: 'GET'
     }).then(response => response.text());
@@ -38,12 +39,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     let item, key, value;
     for (const env of envs.split('\n')) {
         item = env.replace('\r', '').split('=');
-        key = item[0];
-        value = item[1];
-        ENVS[key] = value;
+        if (item[0]) { // Verificación simple para evitar líneas vacías
+            key = item[0];
+            value = item[1];
+            ENVS[key] = value;
+        }
     }
+    
+    // Inicializar cliente Supabase
     _supabase = createClient(ENVS.SUPABASE_URL, ENVS.SUPABASE_KEY);
-    fetchLinks();
+    
+    // 1. Carga inicial
+    await fetchLinks();
+
+    // 2. IMPLEMENTACIÓN DE ACTUALIZACIÓN AUTOMÁTICA
+    // Se ejecuta cada 5000 milisegundos (5 segundos)
+    setInterval(() => {
+        // Llamamos a fetchLinks en "segundo plano"
+        // Nota: Mantenemos los filtros actuales del usuario al recargar
+        fetchLinks(true); 
+    }, 5000);
 });
 
 function toggleTheme() {
@@ -70,11 +85,18 @@ function applyTheme(themeName) {
 }
 
 // 5. CARGAR DATOS
-async function fetchLinks() {
+// Añadí el parámetro isBackground para saber si es una recarga automática
+async function fetchLinks(isBackground = false) {
     const loadingElement = document.getElementById('loading');
     
     // Verificamos conexión antes de llamar
     if (!_supabase) return;
+
+    // Solo mostramos "Cargando..." si NO es una actualización automática de fondo
+    // para evitar parpadeos molestos al usuario cada 5 segundos.
+    if (!isBackground && loadingElement) {
+        loadingElement.style.display = 'block'; 
+    }
 
     const { data, error } = await _supabase
         .from('links')
@@ -83,23 +105,33 @@ async function fetchLinks() {
 
     if (error) {
         console.error("Error Supabase:", error);
-        loadingElement.innerText = "Error cargando datos. Revisa la consola.";
+        if (!isBackground) loadingElement.innerText = "Error cargando datos. Revisa la consola.";
         return;
     }
 
-    loadingElement.style.display = 'none';
-    globalLinks = data || []; // Aseguramos que sea array
+    if (loadingElement) loadingElement.style.display = 'none';
+    
+    // Actualizamos la lista global
+    globalLinks = data || []; 
+    
+    // Renderizamos de nuevo para reflejar cambios (respetando filtros activos)
     renderList();
 }
 
 // 6. RENDERIZAR LISTA
 function renderList() {
     const listElement = document.getElementById('link-list');
+    
+    // Guardamos la posición del scroll si quisieras mantenerla estrictamente, 
+    // aunque al reemplazar innerHTML suele saltar un poco. 
+    // Para esta implementación simple, reemplazamos todo.
     listElement.innerHTML = '';
 
     const filteredLinks = globalLinks.filter(link => {
         const matchCategory = (currentFilter === 'Todos') || (link.category === currentFilter);
-        const matchSearch = link.title.toLowerCase().includes(searchText.toLowerCase());
+        // Comprobación de seguridad por si link.title es nulo
+        const title = link.title ? link.title.toLowerCase() : '';
+        const matchSearch = title.includes(searchText.toLowerCase());
         return matchCategory && matchSearch;
     });
 
@@ -178,8 +210,10 @@ async function addLink() {
     } else {
         document.getElementById('titleInput').value = '';
         document.getElementById('urlInput').value = '';
-        currentFilter = 'Todos'; 
-        filterBy('Todos');
+        // Opcional: Si quieres que al publicar vuelva a "Todos", descomenta la línea siguiente
+        // currentFilter = 'Todos'; filterBy('Todos');
+        
+        // Forzamos actualización inmediata
         fetchLinks();
     }
 
@@ -205,7 +239,7 @@ function getTimeAgo(dateString) {
     const date = new Date(dateString);
     const now = new Date();
     const seconds = Math.floor((now - date) / 1000);
-    // ... simplificado para brevedad, funciona igual que el tuyo
+    
     let interval = seconds / 31536000;
     if (interval > 1) return "Hace " + Math.floor(interval) + " años";
     interval = seconds / 2592000;
@@ -216,11 +250,15 @@ function getTimeAgo(dateString) {
     if (interval > 1) return "Hace " + Math.floor(interval) + " horas";
     interval = seconds / 60;
     if (interval > 1) return "Hace " + Math.floor(interval) + " min";
+    
+    if(seconds < 10) return "Justo ahora";
+    
     return "Hace un momento";
 }
 
 function copyToClipboard(text) {
     navigator.clipboard.writeText(text).then(() => {
+        // Podríamos usar un toast en lugar de alert para no interrumpir
         alert("¡Enlace copiado al portapapeles! 📋");
     }).catch(err => {
         console.error('Error al copiar: ', err);
